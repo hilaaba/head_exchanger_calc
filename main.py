@@ -1,5 +1,3 @@
-import sys
-
 import requests
 
 CAS_REGISTRY_NUMBERS = {
@@ -16,28 +14,32 @@ CAS_REGISTRY_NUMBERS = {
 }
 
 PROPERTIES_NAMES = (
-    'Temperature (K)',
-    'Pressure (bar)',
-    'Density (kg/m3)',
-    'Volume (m3/kg)',
-    'Internal Energy (kJ/kg)',
-    'Enthalpy (kJ/kg)',
-    'Entropy (kJ/(kg*K))',
-    'Cv (kJ/(kg*K))',
-    'Cp (kJ/(kg*K))',
-    'Sound_speed m/s',
-    'Joule_Thomson (K/bar)',
-    'Viscosity (uPa*s)',
-    'Thermal Conductivity (W/(m*k))',
+    'Temperature',
+    'Pressure',
+    'Density',
+    'Volume',
+    'Internal Energy',
+    'Enthalpy',
+    'Entropy',
+    'Cv',
+    'Cp',
+    'Sound_speed',
+    'Joule_Thomson',
+    'Viscosity',
+    'Thermal Conductivity',
     'Phase',
 )
 
+NORMAL_PRESSURE = 1.013
+NORMAL_TEMPERATURE = 273.15
 
-def get_fluid_cas_number(fluid):
+
+def get_fluid_cas_number():
+    fluid = input('Введите название рабочей среды: ').lower()
     fluid_cas_number = CAS_REGISTRY_NUMBERS.get(fluid)
-    if not fluid_cas_number:
-        print('Рабочая среда не найдена. Программа принудительно остановлена.')
-        sys.exit()
+    while fluid_cas_number is None:
+        fluid = input('Рабочая среда не найдена. Повторите ввод: ').lower()
+        fluid_cas_number = CAS_REGISTRY_NUMBERS.get(fluid)
     return fluid_cas_number
 
 
@@ -64,44 +66,48 @@ def get_fluid_properties(cas_number, pressure, temperature):
     return thermodynamic_properties
 
 
-def get_normal_properties(cas_number):
-    normal_pressure = 1.013
-    normal_temperature = 273.15
-    return get_fluid_properties(cas_number, normal_pressure, normal_temperature)
+def calculate_enthalpy_difference(cas_number, pressure, temperature_inlet,
+                                  temperature_outlet):
+    enthalpy_inlet = get_fluid_properties(
+        cas_number,
+        pressure,
+        temperature_inlet,
+    ).get('Enthalpy')
+    enthalpy_outlet = get_fluid_properties(
+        cas_number,
+        pressure,
+        temperature_outlet,
+    ).get('Enthalpy')
+    return enthalpy_outlet - enthalpy_inlet
 
 
 def main():
     print(f'Вот какие рабочие среды я знаю:', end=' ')
-    for key in CAS_REGISTRY_NUMBERS.keys():
-        print(key, end=', ')
-    print()
-    fluid = input('Введите название рабочей среды: ').lower()
-    cas_number = get_fluid_cas_number(fluid)
+    print(*CAS_REGISTRY_NUMBERS.keys(), sep=', ')
+    cas_number = get_fluid_cas_number()
     pressure = input('Введите значение давления (бар): ')
     temperature_inlet = input('Введите значение температуры на входе (K): ')
     temperature_outlet = input('Введите значение температуры на выходе (K): ')
     normal_flow_rate = float(
         input('Введите расход при нормальных условиях (нм3/ч): ')
     )
-    properties_inlet = get_fluid_properties(
+    normal_density = get_fluid_properties(
+        cas_number,
+        NORMAL_PRESSURE,
+        NORMAL_TEMPERATURE,
+    ).get('Density')
+    mass_flow_rate = normal_flow_rate * normal_density
+    enthalpy_difference = calculate_enthalpy_difference(
         cas_number,
         pressure,
         temperature_inlet,
+        temperature_outlet
     )
-    properties_outlet = get_fluid_properties(
-        cas_number,
-        pressure,
-        temperature_outlet,
-    )
-    enthalpy_inlet = properties_inlet.get('Enthalpy (kJ/kg)')
-    enthalpy_outlet = properties_outlet.get('Enthalpy (kJ/kg)')
-    normal_density = get_normal_properties(cas_number).get('Density (kg/m3)')
-    mass_flow_rate = normal_flow_rate * normal_density
     electric_power = round(
-        (mass_flow_rate * (enthalpy_outlet - enthalpy_inlet)) / (3.6 * 1000), 1
+        mass_flow_rate * enthalpy_difference / 3600, 1
     )
-    print(f'Необходимая мощность равна {electric_power} кВт.')
-    print(f'Мощность с запасом 1.3 равна {round(electric_power * 1.3, 1)} кВт.')
+    print(f'Необходимая мощность нагревателя равна {electric_power} кВт.')
+    print(f'Мощность с запасом 30% равна {round(electric_power * 1.3, 1)} кВт.')
 
 
 if __name__ == '__main__':
