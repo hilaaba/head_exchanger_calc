@@ -46,6 +46,9 @@ MM_IN_M = 1000
 
 
 def is_number(number):
+    """
+    Проверка на число.
+    """
     while True:
         try:
             float(number)
