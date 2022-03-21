@@ -31,13 +31,13 @@ PROPERTIES_NAMES = (
 )
 
 DIAMETER_NOMINAL = (
-    2.5, 3, 4, 5, 6, 10, 12, 15, 16, 20, 25, 32, 40, 50, 63, 65, 80, 100,
+    2.5, 3, 4, 5, 6, 10, 15, 20, 25, 32, 40, 50, 63, 80, 100,
     125, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000,
     1200, 1400, 1600, 1800, 2000, 2200, 2400, 2800, 3000, 3400, 4000,
 )
 
 LIQUID_VELOCITY = 3
-VAPOR_VELOCITY = 15
+GAS_VELOCITY = 20
 
 NORMAL_PRESSURE = 1.013
 NORMAL_TEMPERATURE = 273.15
@@ -91,13 +91,14 @@ def get_fluid_properties(cas_number, pressure, temperature):
         'm%2Fs&VisUnit=uPa*s&STUnit=N%2Fm'
     )
     try:
-        # запрос сразу преобразуем в список из строк
+        # Запрос сразу преобразуем в список из строк.
         response = requests.get(url).text.split()
-        # в запросе значения параметров начинаются с 30
-        # добавим все значения в property_values
+        # В запросе значения параметров начинаются с 30.
+        # добавим все значения в property_values.
         property_values = list(map(float, response[30:-1:1]))
+        # Последним в списке идет фазовое состояние. Просто добавим его.
         property_values.append(response[-1])
-        # создадим словарь с термодинамескими свойствами
+        # Создадим словарь с термодинамическими свойствами.
         thermodynamic_properties = dict()
         for index in range(len(PROPERTIES_NAMES)):
             thermodynamic_properties.update({PROPERTIES_NAMES[index]: property_values[index]})
@@ -134,16 +135,26 @@ def calc_electric_power(mass_flow_rate, enthalpy_difference):
     return round(mass_flow_rate * enthalpy_difference / SECOND_IN_HOUR, 1)
 
 
-def get_nominal_diameter(mass_flow_rate, density_outlet, phase):
+def get_nominal_diameter(mass_flow_rate, density, phase):
     """
     Получение значения номинального диаметра для патрубка нагревателя.
     """
-    velocity = LIQUID_VELOCITY if phase == 'liquid' else VAPOR_VELOCITY
-    cross_sectional_area = mass_flow_rate / (velocity * density_outlet) * MM_IN_M ** 2 / SECOND_IN_HOUR
+    velocity = LIQUID_VELOCITY if phase == 'liquid' else GAS_VELOCITY
+    cross_sectional_area = mass_flow_rate / (velocity * density) * MM_IN_M ** 2 / SECOND_IN_HOUR
     diameter = (4 * cross_sectional_area / pi) ** 0.5
     for index in range(len(DIAMETER_NOMINAL)):
         if DIAMETER_NOMINAL[index] < diameter < DIAMETER_NOMINAL[index + 1]:
             return DIAMETER_NOMINAL[index + 1]
+
+
+def calc_velocity(diameter, mass_flow_rate, density):
+    """
+    Расчет скорости потока.
+    """
+    cross_sectional_area = pi * diameter ** 2 / 4 / MM_IN_M ** 2
+    volumetric_flow_rate = mass_flow_rate / density
+    velocity = volumetric_flow_rate / (cross_sectional_area * SECOND_IN_HOUR)
+    return round(velocity, 1)
 
 
 def main():
@@ -179,9 +190,11 @@ def main():
     electric_power = calc_electric_power(mass_flow_rate, enthalpy_difference)
     electric_power_30 = round(electric_power * 1.3, 1)
     nominal_diameter = get_nominal_diameter(mass_flow_rate, density_outlet, phase_outlet)
+    velocity = calc_velocity(nominal_diameter, mass_flow_rate, density_outlet)
     print(f'Необходимая мощность нагревателя равна: {electric_power} кВт.')
     print(f'Мощность с запасом 30% равна: {electric_power_30} кВт.')
     print(f'Номинальный диаметр патрубка: DN{nominal_diameter}')
+    print(f'Скорость газа на выходе: {velocity} м/с.')
     input('Чтобы выйти нажмите Enter')
 
 
