@@ -31,7 +31,7 @@ PROPERTIES_NAMES = (
 )
 
 DIAMETER_NOMINAL = (
-    2.5, 3,	4, 5, 6, 10, 12, 15, 16, 20, 25, 32, 40, 50, 63, 65, 80, 100,
+    2.5, 3, 4, 5, 6, 10, 12, 15, 16, 20, 25, 32, 40, 50, 63, 65, 80, 100,
     125, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000,
     1200, 1400, 1600, 1800, 2000, 2200, 2400, 2800, 3000, 3400, 4000,
 )
@@ -45,13 +45,26 @@ SECOND_IN_HOUR = 3600
 MM_IN_M = 1000
 
 
+def is_number(number):
+    while True:
+        try:
+            float(number)
+            return number
+        except ValueError:
+            number = input('Неправильный ввод. Введите заново: ')
+
+
 def is_true(answer):
     """
     Булево значение ответа.
     """
-    if answer.lower() in ('да', 'дв', 'yes', 'д', 'y'):
-        return True
-    return False
+    while True:
+        if answer.lower() == 'да':
+            return True
+        elif answer.lower() == 'нет':
+            return False
+        else:
+            answer = input('Неправильный ввод. Введите заново: ')
 
 
 def get_fluid_cas_number(fluid):
@@ -98,9 +111,9 @@ def get_mass_flow_rate(normal_density, flag):
     Получение значения массового расхода в зависимости от ответа.
     """
     if flag:
-        normal_flow_rate = float(input('Введите расход при нормальных условиях (нм3/ч): '))
+        normal_flow_rate = float(is_number(input('Введите расход при нормальных условиях (нм3/ч): ')))
         return normal_flow_rate * normal_density
-    return float(input('Введите массовый расход (кг/ч): '))
+    return float(is_number(input('Введите массовый расход (кг/ч): ')))
 
 
 def get_temperature(flag, pipe_branch):
@@ -108,8 +121,10 @@ def get_temperature(flag, pipe_branch):
     Получение значения температуры в зависимости от ответа.
     """
     if flag:
-        return str(float(input(f'Введите значение температуры на {pipe_branch}е (°С): ')) + NORMAL_TEMPERATURE)
-    return input(f'Введите значение температуры на {pipe_branch}е (K): ')
+        return str(
+            float(is_number(input(f'Введите значение температуры на {pipe_branch}е (°С): '))) + NORMAL_TEMPERATURE
+        )
+    return is_number(input(f'Введите значение температуры на {pipe_branch}е (K): '))
 
 
 def calc_electric_power(mass_flow_rate, enthalpy_difference):
@@ -144,7 +159,7 @@ def main():
     normal_thermodynamic_properties = get_fluid_properties(cas_number, NORMAL_PRESSURE, NORMAL_TEMPERATURE)
     normal_density = normal_thermodynamic_properties.get('Density')
 
-    pressure = input('Введите значение давления (бар): ')
+    pressure = is_number(input('Введите значение давления (бар): '))
 
     flag = is_true(input('Температура в Цельсиях? (да/нет): '))
     temperature_inlet = get_temperature(flag, 'вход')
