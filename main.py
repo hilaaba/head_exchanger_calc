@@ -59,9 +59,9 @@ def is_true(answer):
     Булево значение ответа.
     """
     while True:
-        if answer.lower() == 'да':
+        if answer.lower() in ('да', 'yes'):
             return True
-        elif answer.lower() == 'нет':
+        elif answer.lower() in ('нет', 'no'):
             return False
         else:
             answer = input('Неправильный ввод. Введите заново: ')
@@ -182,7 +182,7 @@ def main():
     print(f'Необходимая мощность нагревателя равна: {electric_power} кВт.')
     print(f'Мощность с запасом 30% равна: {electric_power_30} кВт.')
     print(f'Номинальный диаметр патрубка: DN{nominal_diameter}')
-    print(input('Чтобы выйти нажмите Enter'))
+    input('Чтобы выйти нажмите Enter')
 
 
 if __name__ == '__main__':
