@@ -1,3 +1,4 @@
+import sys
 import requests
 from math import pi
 
@@ -11,6 +12,7 @@ CAS_REGISTRY_NUMBERS = {
     'пропан': 'C74986',
     'бутан': 'C106978',
     'гелий': 'C7440597',
+    'аммиак': 'C7664417',
 }
 
 PROPERTIES_NAMES = (
@@ -31,13 +33,13 @@ PROPERTIES_NAMES = (
 )
 
 DIAMETER_NOMINAL = (
-    2.5, 3, 4, 5, 6, 10, 15, 20, 25, 32, 40, 50, 63, 80, 100,
+    2.5, 3, 4, 5, 6, 10, 15, 20, 25, 32, 40, 50, 65, 80, 100,
     125, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000,
     1200, 1400, 1600, 1800, 2000, 2200, 2400, 2800, 3000, 3400, 4000,
 )
 
 LIQUID_VELOCITY = 3
-GAS_VELOCITY = 20
+GAS_VELOCITY = 17
 
 NORMAL_PRESSURE = 1.013
 NORMAL_TEMPERATURE = 273.15
@@ -96,8 +98,8 @@ def get_fluid_properties(cas_number, pressure, temperature):
     try:
         # Запрос сразу преобразуем в список из строк.
         response = requests.get(url).text.split()
-        # В запросе значения параметров начинаются с 30.
-        # добавим все значения в property_values.
+        # В запросе значения параметров начинаются с 30 номера.
+        # Все значения преобразуем во float и добавим в property_values.
         property_values = list(map(float, response[30:-1:1]))
         # Последним в списке идет фазовое состояние. Просто добавим его.
         property_values.append(response[-1])
@@ -107,7 +109,9 @@ def get_fluid_properties(cas_number, pressure, temperature):
             thermodynamic_properties.update({PROPERTIES_NAMES[index]: property_values[index]})
         return thermodynamic_properties
     except Exception as error:
-        print(f'Произошла следующая ошибка: {error}')
+        print(f'Произошла ошибка: {error}')
+        input('Нажмите клавишу Enter, чтобы выйти из программы.')
+        sys.exit()
 
 
 def get_mass_flow_rate(normal_density, flag):
@@ -135,7 +139,9 @@ def calc_electric_power(mass_flow_rate, enthalpy_difference):
     """
     Расчет электрической мощности нагревателя.
     """
-    return round(mass_flow_rate * enthalpy_difference / SECOND_IN_HOUR, 1)
+    electric_power = round(mass_flow_rate * enthalpy_difference / SECOND_IN_HOUR, 1)
+    electric_power_30 = round(electric_power * 1.3, 1)
+    return electric_power, electric_power_30
 
 
 def get_nominal_diameter(mass_flow_rate, density, phase):
@@ -146,7 +152,7 @@ def get_nominal_diameter(mass_flow_rate, density, phase):
     cross_sectional_area = mass_flow_rate / (velocity * density) * MM_IN_M ** 2 / SECOND_IN_HOUR
     diameter = (4 * cross_sectional_area / pi) ** 0.5
     for index in range(len(DIAMETER_NOMINAL)):
-        if DIAMETER_NOMINAL[index] < diameter < DIAMETER_NOMINAL[index + 1]:
+        if DIAMETER_NOMINAL[index] < diameter <= DIAMETER_NOMINAL[index + 1]:
             return DIAMETER_NOMINAL[index + 1]
 
 
@@ -154,19 +160,40 @@ def calc_velocity(diameter, mass_flow_rate, density):
     """
     Расчет скорости потока.
     """
-    cross_sectional_area = pi * diameter ** 2 / 4 / MM_IN_M ** 2
+    cross_sectional_area = pi * diameter ** 2 / (4 * MM_IN_M ** 2)
     volumetric_flow_rate = mass_flow_rate / density
     velocity = volumetric_flow_rate / (cross_sectional_area * SECOND_IN_HOUR)
     return round(velocity, 1)
+
+
+def print_parameters(electric_power, electric_power_30, nominal_diameter, velocity):
+    """
+    Печатает параметры нагревателя.
+    """
+    print(f'Необходимая мощность нагревателя равна: {electric_power} кВт.')
+    print(f'Мощность с запасом 30% равна: {electric_power_30} кВт.')
+    print(f'Номинальный диаметр патрубка: DN{nominal_diameter}')
+    print(f'Скорость газа на выходе: {velocity} м/с.')
+    input('Нажмите клавишу Enter, чтобы выйти из программы.')
+
+
+def get_phase(answer):
+    """
+    Возвращает фазовое состояние на английском.
+    """
+    while True:
+        if answer.lower() == 'газ':
+            return 'vapor'
+        elif answer.lower() == 'жидкость':
+            return 'liquid'
+        else:
+            answer = input('Неправильный ввод. Введите заново: ')
 
 
 def main():
     """
     Главная функция.
     """
-    print(f'Вот какие рабочие среды я знаю:', end=' ')
-    print(*CAS_REGISTRY_NUMBERS.keys(), sep=', ')
-
     fluid = input('Введите название рабочей среды: ').lower()
     cas_number = get_fluid_cas_number(fluid)
 
@@ -190,16 +217,42 @@ def main():
     enthalpy_outlet = thermodynamic_properties_outlet.get('Enthalpy')
     enthalpy_difference = enthalpy_outlet - enthalpy_inlet
 
-    electric_power = calc_electric_power(mass_flow_rate, enthalpy_difference)
-    electric_power_30 = round(electric_power * 1.3, 1)
+    electric_power, electric_power_30 = calc_electric_power(mass_flow_rate, enthalpy_difference)
+
     nominal_diameter = get_nominal_diameter(mass_flow_rate, density_outlet, phase_outlet)
     velocity = calc_velocity(nominal_diameter, mass_flow_rate, density_outlet)
-    print(f'Необходимая мощность нагревателя равна: {electric_power} кВт.')
-    print(f'Мощность с запасом 30% равна: {electric_power_30} кВт.')
-    print(f'Номинальный диаметр патрубка: DN{nominal_diameter}')
-    print(f'Скорость газа на выходе: {velocity} м/с.')
-    input('Чтобы выйти нажмите Enter')
+
+    print_parameters(electric_power, electric_power_30, nominal_diameter, velocity)
+
+
+def calc_unknown_fluid():
+    """
+    Расчет неизвестной рабочей среды.
+    """
+    phase = get_phase(input('Это газ или жидкость? (газ/жидкость): '))
+
+    enthalpy_inlet = float(is_number(input('Введите значение энтальпии на входе (кДж/кг): ')))
+    enthalpy_outlet = float(is_number(input('Введите значение энтальпии на выходе (кДж/кг): ')))
+    enthalpy_difference = enthalpy_outlet - enthalpy_inlet
+
+    normal_density = float(is_number(input('Введите значение плотности при нормальных условиях (кг/м3): ')))
+    density_outlet = float(is_number(input('Введите значение плотности на выходе (кг/м3): ')))
+
+    flag = is_true(input('Значение расхода при нормальных условиях? (да/нет): '))
+    mass_flow_rate = get_mass_flow_rate(normal_density, flag)
+
+    electric_power, electric_power_30 = calc_electric_power(mass_flow_rate, enthalpy_difference)
+
+    nominal_diameter = get_nominal_diameter(mass_flow_rate, density_outlet, phase)
+    velocity = calc_velocity(nominal_diameter, mass_flow_rate, density_outlet)
+
+    print_parameters(electric_power, electric_power_30, nominal_diameter, velocity)
 
 
 if __name__ == '__main__':
-    main()
+    print(f'Вот какие рабочие среды я знаю:', end=' ')
+    print(*CAS_REGISTRY_NUMBERS.keys(), sep=', ')
+    if is_true(input('Ваша рабочая среда есть в списке? (да/нет): ')):
+        main()
+    else:
+        calc_unknown_fluid()
