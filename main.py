@@ -174,7 +174,6 @@ def print_parameters(electric_power, electric_power_30, nominal_diameter, veloci
     print(f'Мощность с запасом 30% равна: {electric_power_30} кВт.')
     print(f'Номинальный диаметр патрубка: DN{nominal_diameter}')
     print(f'Скорость газа на выходе: {velocity} м/с.')
-    input('Нажмите клавишу Enter, чтобы выйти из программы.')
 
 
 def get_phase(answer):
@@ -250,9 +249,12 @@ def calc_unknown_fluid():
 
 
 if __name__ == '__main__':
-    print(f'Вот какие рабочие среды я знаю:', end=' ')
-    print(*CAS_REGISTRY_NUMBERS.keys(), sep=', ')
-    if is_true(input('Ваша рабочая среда есть в списке? (да/нет): ')):
-        main()
-    else:
-        calc_unknown_fluid()
+    while True:
+        print(f'Вот какие рабочие среды я знаю:', end=' ')
+        print(*CAS_REGISTRY_NUMBERS.keys(), sep=', ')
+        if is_true(input('Ваша рабочая среда есть в списке? (да/нет): ')):
+            main()
+        else:
+            calc_unknown_fluid()
+        if not is_true(input('Хотите еще раз выполнить расчет? (да/нет): ')):
+            sys.exit()
