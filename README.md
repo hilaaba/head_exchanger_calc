@@ -32,7 +32,7 @@ pip install -r requirements.txt
 python3 main.py
 ```
 
-При необходимости скрипт можно преобразовать в .exe файл:
+При необходимости скрипт можно преобразовать в файл:
 ```
 pyinstaller --onefile --windowed main.py
 ```
