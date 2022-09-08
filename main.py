@@ -80,16 +80,29 @@ def get_fluid_cas_number(fluid: str) -> str:
 
 def get_fluid_properties(cas_number: str, pressure: float, temperature: float) -> dict:
     """Получение термодинамических свойств рабочей жидкости."""
-    url: str = (
-        f'https://webbook.nist.gov/cgi/fluid.cgi?Action=Data&Wide=on&ID='
-        f'{cas_number}&Type=IsoTherm&Digits=12&PLow={str(pressure)}'
-        f'&PHigh={str(pressure)}&PInc=1&T={str(temperature)}'
-        '&RefState=DEF&TUnit=K&PUnit=bar&DUnit=kg%2Fm3&HUnit=kJ%2Fkg&WUnit='
-        'm%2Fs&VisUnit=uPa*s&STUnit=N%2Fm'
-    )
+    url: str = 'https://webbook.nist.gov/cgi/fluid.cgi'
+    params: dict = {
+        'Action': 'Data',
+        'Wide': 'On',
+        'ID': cas_number,
+        'Type': 'IsoTherm',
+        'Digits': '5',
+        'PLow': str(pressure),
+        'PHigh': str(pressure),
+        'PInc': '1',
+        'T': str(temperature),
+        'RefState': 'DEF',
+        'TUnit': 'K',
+        'PUnit': 'bar',
+        'DUnit': 'kg%2Fm3',
+        'HUnit': 'kJ%2Fkg',
+        'WUnit': 'm%2Fs',
+        'VisUnit': 'uPa*s',
+        'STUnit': 'N%2Fm',
+    }
     try:
         # Запрос сразу преобразуем в список из строк.
-        response: list = requests.get(url).text.split()
+        response: list = requests.get(url, params=params).text.split()
         # В запросе значения параметров начинаются с 30 номера.
         # Все значения преобразуем во float и добавим в property_values.
         property_values = list(map(float, response[30:-1:1]))
